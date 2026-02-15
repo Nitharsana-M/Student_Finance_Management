@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2 class="mb-4">📊 Dashboard</h2>
+
+<a href="{% url 'add_transaction' %}" class="btn btn-primary mb-3">
+    + Add Transaction
+</a>
+
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5>Total Income</h5>
+                <h3>₹ {{ total_income }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5>Total Expense</h5>
+                <h3>₹ {{ total_expense }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5>Balance</h5>
+                <h3>₹ {{ balance }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Budget Warning -->
+{% if budget_warning %}
+<div class="alert alert-danger mt-3">
+    {{ budget_warning }}
+</div>
+{% endif %}
+
+<!-- Pie Chart -->
+<div style="width: 400px; margin: auto;">
+    <canvas id="expenseChart"></canvas>
+</div>
+
+<h4 class="mt-5">📄 Recent Transactions</h4>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Amount</th>
+            <th>Actions</th>
+
+        </tr>
+    </thead>
+    <tbody>
+        {% for transaction in recent_transactions %}
+        <tr>
+        <td>{{ transaction.date }}</td>
+        <td>{{ transaction.category.name }}</td>
+        <td>₹ {{ transaction.amount }}</td>
+        <td>
+            <a href="{% url 'edit_transaction' transaction.pk %}" class="btn btn-sm btn-warning">Edit</a>
+            <a href="{% url 'delete_transaction' transaction.pk %}" class="btn btn-sm btn-danger">Delete</a>
+        </td>
+    </tr>
+
+        {% empty %}
+        <tr>
+            <td colspan="3">No transactions yet.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<!-- Savings Goals -->
+<h4 class="mt-5">🎯 Savings Goals</h4>
+
+{% for goal in goals %}
+<div class="card mb-3">
+    <div class="card-body">
+        <h5>{{ goal.title }}</h5>
+        <p>₹ {{ goal.saved_amount }} / ₹ {{ goal.target_amount }}</p>
+
+        <div class="progress">
+            <div class="progress-bar bg-success"
+                 role="progressbar"
+                 style="width: {{ goal.progress_percentage }}%">
+                {{ goal.progress_percentage|floatformat:1 }}%
+            </div>
+        </div>
+    </div>
+</div>
+{% empty %}
+<p>No savings goals yet.</p>
+{% endfor %}
+
+<!-- Chart Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const labels = JSON.parse('{{ labels|escapejs }}');
+    const data = JSON.parse('{{ data|escapejs }}');
+
+    const ctx = document.getElementById('expenseChart');
+
+    if (ctx && data.length > 0) {
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                }]
+            }
+        });
+    }
+</script>
+
+{% endblock %}
+
