@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div style="max-width:560px; margin:0 auto;">
+    <div class="section-header mb-4">
+        <h2 class="page-title">👤 <span>Profile</span></h2>
+        {% if not edit_mode %}
+        <a href="{% url 'profile_edit' %}" class="btn-primary-custom" style="text-decoration:none;">
+            <i class="bi bi-pencil-square"></i> Edit Profile
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="card-panel">
+        <!-- Avatar + username -->
+        <div style="display:flex; flex-direction:column; align-items:center; padding: 1rem 0 1.5rem;">
+            <div class="profile-avatar">{{ user.username|slice:":1"|upper }}</div>
+            <h3 style="font-weight:700; color:#0f172a; margin:0;">
+                {% if user.get_full_name %}{{ user.get_full_name }}{% else %}{{ user.username }}{% endif %}
+            </h3>
+            <p style="color:#64748b; font-size:0.875rem; margin-top:0.25rem;">@{{ user.username }}</p>
+        </div>
+
+        {% if edit_mode %}
+        <!-- EDIT MODE -->
+        <hr style="border-color:#f1f5f9; margin-bottom:1.5rem;">
+        <form id="profileForm" method="POST" action="{% url 'profile_edit' %}">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label class="form-label">First Name</label>
+                    <input type="text" name="first_name" class="form-control" value="{{ user.first_name }}"
+                        placeholder="First name">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Last Name</label>
+                    <input type="text" name="last_name" class="form-control" value="{{ user.last_name }}"
+                        placeholder="Last name">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" value="{{ user.email }}"
+                        placeholder="your@email.com">
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn-primary-custom flex-fill">
+                    <i class="bi bi-check-lg"></i> Save Changes
+                </button>
+                <a href="{% url 'profile' %}" class="btn-sm-custom btn-edit flex-fill"
+                    style="padding:0.6rem;text-align:center;text-decoration:none;font-size:0.875rem;">
+                    Cancel
+                </a>
+            </div>
+        </form>
+
+        {% else %}
+        <!-- VIEW MODE -->
+        <hr style="border-color:#f1f5f9; margin-bottom:1.25rem;">
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <div class="profile-info-row">
+                    <label>First Name</label>
+                    <span>{{ user.first_name|default:"—" }}</span>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="profile-info-row">
+                    <label>Last Name</label>
+                    <span>{{ user.last_name|default:"—" }}</span>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="profile-info-row">
+                    <label>Email</label>
+                    <span>{{ user.email|default:"—" }}</span>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="profile-info-row">
+                    <label>Username</label>
+                    <span>{{ user.username }}</span>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="profile-info-row">
+                    <label>Member Since</label>
+                    <span>{{ user.date_joined|date:"F j, Y" }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sign out block -->
+    <div class="card-panel" style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+        <div>
+            <div style="font-weight:600; color:#0f172a;">Sign Out</div>
+            <div style="font-size:0.8rem; color:#64748b;">You will be returned to the login page.</div>
+        </div>
+        <a href="{% url 'logout' %}" class="btn-sm-custom btn-delete"
+            style="padding:0.55rem 1rem;text-decoration:none;font-size:0.875rem;white-space:nowrap;">
+            <i class="bi bi-box-arrow-right"></i> Sign Out
+        </a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% if edit_mode %}
+<script>
+    // AJAX profile save
+    document.getElementById('profileForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const fd = new FormData(this);
+        ajaxPost('{% url "profile_edit" %}', fd, 'Profile updated!', () => {
+            setTimeout(() => window.location.href = '{% url "profile" %}', 800);
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}

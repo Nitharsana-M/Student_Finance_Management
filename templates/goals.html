@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- ══════════════════════════════════════════════════════════════
+   GOALS PAGE
+══════════════════════════════════════════════════════════════ -->
+<div class="page-section active" id="section-goals">
+    <div class="section-header">
+        <h2 class="page-title">Savings <span>Goals</span></h2>
+        <button class="btn-primary-custom" onclick="openModal('addGoalModal')">
+            <i class="bi bi-flag me-1"></i> New Goal
+        </button>
+    </div>
+
+    <div class="row" id="goalsList">
+        <div class="col-12">
+            <div class="spinner-custom"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+   MODAL (Add/Withdraw Savings locally to this page)
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="addSavingsModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeModal('addSavingsModal')">✕</button>
+        <h4 id="addSavingsTitle">Update Savings</h4>
+        <form id="addSavingsForm">
+            <input type="hidden" id="savingsGoalId">
+            <input type="hidden" id="savingsAction">
+            <div class="mb-3">
+                <label class="form-label">Amount (₹)</label>
+                <input type="number" id="savingsAmount" name="amount" class="form-control" step="0.01" min="0.01"
+                    required placeholder="0.00">
+            </div>
+            <button type="submit" class="btn-primary-custom w-100" id="savingsSubmitBtn">Submit</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API = {
+        goals: '{% url "api_goals" %}',
+        addSavings: (id) => `/add-savings/${id}/`,
+        withdraw: (id) => `/withdraw/${id}/`,
+    };
+
+    const fmt = n => '₹ ' + parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function loadGoals() {
+        fetch(API.goals, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(async r => {
+                if (!r.ok) {
+                    const text = await r.text();
+                    try {
+                        let j = JSON.parse(text);
+                        throw new Error(j.traceback || j.error || 'Server error');
+                    } catch (e) { throw new Error(text || 'Failed to load goals API'); }
+                }
+                return r.json();
+            })
+            .then(d => {
+                const list = document.getElementById('goalsList');
+                if (!d.goals || !d.goals.length) {
+                    list.innerHTML = '<div class="col-12"><div class="no-data">No savings goals created. Click New Goal to get started.</div></div>';
+                    return;
+                }
+                list.innerHTML = d.goals.map(g => `
+            <div class="col-md-6 col-lg-4">
+                <div class="goal-card">
+                    <h5>${escHtml(g.title)}</h5>
+                    <div class="amounts">Saved: ${fmt(g.saved_amount)} / ${fmt(g.target_amount)}</div>
+                    <div class="progress mb-2"><div class="progress-bar" style="width: ${g.progress_percentage}%"></div></div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <small style="color:#94a3b8; font-weight:600;">${g.progress_percentage}%</small>
+                        <small style="color:#94a3b8;"><i class="bi bi-clock"></i> ${g.deadline}</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn-sm-custom" style="background:var(--navy); color:#fff; flex:1;" onclick="openSavingsModal(${g.id}, '${escHtml(g.title)}', false)">
+                            <i class="bi bi-plus-lg"></i> Add
+                        </button>
+                        <button class="btn-sm-custom" style="background:var(--accent); color:#fff; flex:1;" onclick="openSavingsModal(${g.id}, '${escHtml(g.title)}', true)">
+                            <i class="bi bi-dash-lg"></i> Withdraw
+                        </button>
+                    </div>
+                </div>
+                ${g.history.length ? `
+                <details class="mt-3">
+                    <summary style="font-size:0.8rem;color:#64748b;cursor:pointer;">History (${g.history.length})</summary>
+                    <ul class="history-list mt-2">
+                        ${g.history.map(h => `<li>₹ ${h.amount} on ${h.date}</li>`).join('')}
+                    </ul>
+                </details>` : ''}
+            </div>`).join('');
+            })
+            .catch(err => {
+                const list = document.getElementById('goalsList');
+                list.innerHTML = `<div class="col-12"><div class="alert alert-danger" style="white-space:pre-wrap; text-align:left; font-size:12px;">${err.message}</div></div>`;
+                console.error("Error loading goals:", err);
+            });
+    }
+
+    function escHtml(s) { return s.replace(/['"]/g, ''); }
+
+    function openSavingsModal(goalId, title, isWithdraw) {
+        document.getElementById('savingsGoalId').value = goalId;
+        document.getElementById('savingsAction').value = isWithdraw ? 'withdraw' : 'add';
+        document.getElementById('addSavingsTitle').innerHTML = `
+        <i class="bi bi-${isWithdraw ? 'dash' : 'plus'}-circle me-2" style="color:var(--accent);"></i>
+        ${isWithdraw ? 'Withdraw from' : 'Add Savings to'} <em>${title}</em>`;
+        document.getElementById('savingsSubmitBtn').textContent = isWithdraw ? 'Withdraw' : 'Add Savings';
+        document.getElementById('savingsAmount').value = '';
+        openModal('addSavingsModal');
+    }
+
+    document.getElementById('addSavingsForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const goalId = document.getElementById('savingsGoalId').value;
+        const action = document.getElementById('savingsAction').value;
+        const fd = new FormData(this);
+        const url = action === 'withdraw' ? API.withdraw(goalId) : API.addSavings(goalId);
+        const msg = action === 'withdraw' ? 'Withdrawal recorded!' : 'Savings added!';
+        ajaxPost(url, fd, msg, () => {
+            closeModal('addSavingsModal');
+            loadGoals();
+        });
+    });
+
+    window.reloadAll = loadGoals;
+    document.addEventListener('DOMContentLoaded', loadGoals);
+</script>
+{% endblock %}

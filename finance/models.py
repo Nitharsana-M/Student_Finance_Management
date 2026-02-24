@@ -1,10 +1,10 @@
 from django.db import models
 
-
 # Create your models here.
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import Sum
+from decimal import Decimal
 
 
 class Category(models.Model):
@@ -16,10 +16,11 @@ class Category(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     category_type = models.CharField(max_length=10, choices=CATEGORY_TYPE)
-
+    
     def __str__(self):
         return self.name
 
+    
 
 class Transaction(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -28,26 +29,24 @@ class Transaction(models.Model):
     date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.user.username} - {self.amount}"
-
 
 class SavingsGoal(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     target_amount = models.DecimalField(max_digits=10, decimal_places=2)
     deadline = models.DateField()
+    is_completed = models.BooleanField(default=False)
     
     @property
     def saved_amount(self):
         return self.transactions.aggregate(
             total=Sum('amount')
-        )['total'] or 0
+        )['total'] or Decimal('0.00')
 
     def progress_percentage(self):
         if self.target_amount == 0:
             return 0
-        return (self.saved_amount / self.target_amount) * 100
+        return float(self.saved_amount / self.target_amount) * 100
 
 
 class Budget(models.Model):

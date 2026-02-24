@@ -1,158 +1,544 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
-<h2 class="mb-4">📊 Dashboard</h2>
-
-<a href="{% url 'add_transaction' %}" class="btn btn-primary mb-3">
-    + Add Transaction
-</a>
-
-
-<div class="row">
-    <div class="col-md-4">
-        <div class="card text-white bg-success mb-3">
-            <div class="card-body">
-                <h5>Total Income</h5>
-                <h3>₹ {{ total_income }}</h3>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card text-white bg-danger mb-3">
-            <div class="card-body">
-                <h5>Total Expense</h5>
-                <h3>₹ {{ total_expense }}</h3>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card text-white bg-primary mb-3">
-            <div class="card-body">
-                <h5>Balance</h5>
-                <h3>₹ {{ balance }}</h3>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Budget Warning -->
-{% if budget_warning %}
-<div class="alert alert-danger mt-3">
-    {{ budget_warning }}
-</div>
-{% endif %}
-
-<!-- Pie Chart -->
-<div style="width: 400px; margin: auto;">
-    <canvas id="expenseChart"></canvas>
-</div>
-
-<h4 class="mt-5">📄 Recent Transactions</h4>
-
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Date</th>
-            <th>Category</th>
-            <th>Amount</th>
-            <th>Actions</th>
-
-        </tr>
-    </thead>
-    <tbody>
-        {% for transaction in recent_transactions %}
-        <tr>
-        <td>{{ transaction.date }}</td>
-        <td>{{ transaction.category.name }}</td>
-        <td>₹ {{ transaction.amount }}</td>
-        <td>
-            <a href="{% url 'edit_transaction' transaction.pk %}" class="btn btn-sm btn-warning">Edit</a>
-            <a href="{% url 'delete_transaction' transaction.pk %}" class="btn btn-sm btn-danger">Delete</a>
-        </td>
-    </tr>
-
-        {% empty %}
-        <tr>
-            <td colspan="3">No transactions yet.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-<!-- Savings Goals -->
-
-<a href="{% url 'add_goal' %}" class="btn btn-success mb-3">
-    + Add Savings Goal
-</a>
-
-<h4 class="mt-5">🎯 Savings Goals</h4>
-
-{% for goal in goals %}
-<div class="card mb-3">
-    <div class="card-body">
-        <h5>{{ goal.title }}</h5>
-        <p>₹ {{ goal.saved_amount }} / ₹ {{ goal.target_amount }}</p>
-
-        <div class="progress">
-            <div class="progress-bar bg-success"
-                 role="progressbar"
-                 style="width: {{ goal.progress_percentage }}%">
-                {{ goal.progress_percentage|floatformat:1 }}%
-            </div>
-        </div>
-
-        <a href="{% url 'add_savings' goal.id %}" 
-           class="btn btn-sm btn-primary mt-2">
-           ➕ Add Savings
-        </a>
-
-        <a href="{% url 'withdraw_savings' goal.id %}" 
-           class="btn btn-sm btn-danger mt-2">
-           ➖ Withdraw
-        </a>
-
-        <h6 class="mt-3">History:</h6>
-        <ul>
-            {% for transaction in goal.transactions.all %}
-                <li>
-                    ₹ {{ transaction.amount }} on {{ transaction.date }}
-                </li>
-            {% empty %}
-                <li>No savings yet.</li>
-            {% endfor %}
-        </ul>
-
-    </div>
-</div>
-{% empty %}
-<p>No savings goals yet.</p>
-{% endfor %}
-
-
-<!-- Chart Script -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <script>
-    const labels = JSON.parse('{{ labels|escapejs }}');
-    const data = JSON.parse('{{ data|escapejs }}');
 
-    const ctx = document.getElementById('expenseChart');
 
-    if (ctx && data.length > 0) {
-        new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                }]
-            }
-        });
-    }
+
 </script>
+<!-- ══════════════════════════════════════════════════════════════
+   OVERVIEW PAGE
+══════════════════════════════════════════════════════════════ -->
+<div class="page-section active" id="section-overview" data-loaded="false">
+    <div class="section-header">
+        <h2 class="page-title">Welcome back, <span>{{ user.first_name|default:user.username }}</span></h2>
+        <button class="btn-primary-custom" onclick="openModal('addTransactionModal')">
+            <i class="bi bi-plus-lg me-1"></i> Add Transaction
+        </button>
+    </div>
+
+    <!-- ===================== STATS CARDS ===================== -->
+    <div class="container">
+        <div class="row g-3 mb-4">
+
+            <div class="col-lg-4 col-md-6 col-sm-12">
+                <div class="stat-card balance">
+                    <h6>Total Balance</h6>
+                    <h2 id="balance">₹ 0.00</h2>
+                    <div class="trend-icon" id="balanceTrend"></div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6 col-sm-12">
+                <div class="stat-card income">
+                    <h6>Total Income</h6>
+                    <h2 id="totalIncome">₹ 0.00</h2>
+                    <div class="trend-icon" id="incomeTrend"></div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 col-md-6 col-sm-12">
+                <div class="stat-card expense">
+                    <h6>Total Expense</h6>
+                    <h2 id="totalExpense">₹ 0.00</h2>
+                    <div class="trend-icon" id="expenseTrend"></div>
+                    <div class="trend text-warning mt-1" id="budgetWarning" style="display:none;"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Content -->
+    <style>
+        <style>
+
+        /* ===== RECTANGLE STAT CARD ===== */
+        .stat-card {
+            border-radius: 20px;
+            padding: 25px;
+            color: white;
+            min-height: 150px;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+
+            transition: all 0.35s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+        }
+
+        .balance {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .income {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+        }
+
+        .expense {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+        }
+
+        .stat-card h6 {
+            font-size: 14px;
+            opacity: 0.85;
+            margin-bottom: 8px;
+        }
+
+        .stat-card h2 {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .trend-icon {
+            font-size: 18px;
+            margin-top: 6px;
+        }
+
+        .trend-up {
+            color: #00ffae;
+        }
+
+        .trend-down {
+            color: #ffcc00;
+        }
+
+        .danger {
+            background: linear-gradient(135deg, #ff0000, #b30000) !important;
+        }
+
+        /* ===== KEEP YOUR CHART STYLES ===== */
+
+        .charts-wrapper {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 992px) {
+            .charts-wrapper {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+        }
+
+        .loading-chart::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.7);
+            z-index: 10;
+        }
+
+        .loading-chart::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border: 3px solid #e2e8f0;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            z-index: 11;
+        }
+
+        .glow {
+            animation: glowEffect 1s ease-in-out;
+        }
+
+        @keyframes glowEffect {
+            0% {
+                box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(255, 255, 255, 0.8);
+            }
+
+            100% {
+                box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+            }
+        }
+
+        /* ===== Trend Icon ===== */
+        .trend-icon {
+            font-size: 20px;
+            margin-top: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .trend-up {
+            color: #00ffae;
+            animation: bounceUp 1s infinite alternate;
+        }
+
+        .trend-down {
+            color: #ffcc00;
+            animation: bounceDown 1s infinite alternate;
+        }
+
+        @keyframes bounceUp {
+            from {
+                transform: translateY(0);
+            }
+
+            to {
+                transform: translateY(-5px);
+            }
+        }
+
+        @keyframes bounceDown {
+            from {
+                transform: translateY(0);
+            }
+
+            to {
+                transform: translateY(5px);
+            }
+        }
+
+
+
+        .charts-wrapper {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 992px) {
+            .charts-wrapper {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+        }
+
+        .loading-chart::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.7);
+            z-index: 10;
+        }
+
+        .loading-chart::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border: 3px solid #e2e8f0;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            z-index: 11;
+        }
+    </style>
+
+    <div class="dashboard-header d-flex justify-content-between align-items-center mb-4 mt-2">
+        <h4 class="mb-0 fw-bold" style="color:var(--navy);">Expense Dashboard</h4>
+        <div class="filter-container">
+            <select id="timeRangeFilter" class="form-select shadow-sm" style="width:auto;">
+                <option value="last_7_days">Last 7 Days</option>
+                <option value="last_30_days" selected>Last 30 Days</option>
+                <option value="last_6_months">Last 6 Months</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="charts-wrapper mb-4">
+        <div class="card-panel h-100 mb-0">
+            <h4><i class="bi bi-pie-chart-fill me-2" style="color:var(--accent);"></i>Expense Breakdown</h4>
+            <div
+                style="max-width:380px;margin:auto;position:relative;height:220px;display:flex;align-items:center;justify-content:center;">
+                <canvas id="expenseChart"></canvas>
+                <div id="noDataMsg" class="no-data" style="display:none;position:absolute;">No expenses yet.</div>
+            </div>
+        </div>
+
+        <div class="card-panel h-100 mb-0">
+            <h4>Daily Expense</h4>
+            <div
+                style="position:relative; height:300px; width:100%; display:flex; align-items:center; justify-content:center;">
+                <canvas id="dailyExpenseChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card-panel h-100 mb-0">
+            <h4>Monthly Expense</h4>
+            <div
+                style="position:relative; height:300px; width:100%; display:flex; align-items:center; justify-content:center;">
+                <canvas id="monthlyExpenseChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row gx-4">
+        <!-- Recent Transactions -->
+        <div class="col-lg-12">
+            <div class="card-panel h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Recent Transactions</h4>
+                    <a href="{% url 'transactions' %}" class="btn btn-sm btn-light">View All</a>
+                </div>
+                <div class="table-responsive-custom">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentTransactionsList">
+                            <tr>
+                                <td colspan="3">
+                                    <div class="spinner-custom"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const API = {
+        summary: '{% url "api_summary" %}',
+        transactions: '{% url "api_transactions" %}',
+        progress: '{% url "api_progress" %}',
+        expenses: '{% url "expense_data_api" %}'
+    };
+
+    let chartInstance = null;
+    let dailyChart = null;
+    let monthlyChart = null;
+    const fmt = n => '₹ ' + parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function loadOverview() {
+        // Summary
+        fetch(API.summary, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('totalIncome').textContent = fmt(d.total_income);
+                document.getElementById('totalExpense').textContent = fmt(d.total_expense);
+                document.getElementById('balance').textContent = fmt(d.balance);
+
+                const warn = document.getElementById('budgetWarning');
+                if (d.budget_warning) { warn.textContent = d.budget_warning; warn.style.display = 'block'; }
+                else { warn.style.display = 'none'; }
+
+                // Chart rendering
+                const ctx = document.getElementById('expenseChart');
+                const noData = document.getElementById('noDataMsg');
+                if (!d.data || d.data.length === 0 || d.data.every(v => v === 0)) {
+                    ctx.style.display = 'none';
+                    noData.style.display = 'block';
+                } else {
+                    ctx.style.display = 'block';
+                    noData.style.display = 'none';
+                    if (chartInstance) chartInstance.destroy();
+                    chartInstance = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: d.labels,
+                            datasets: [{
+                                data: d.data,
+                                backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e'],
+                                borderWidth: 0,
+                                hoverOffset: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '65%',
+                            plugins: {
+                                legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Inter', size: 11 } } },
+                                tooltip: {
+                                    backgroundColor: '#1e293b', bodyFont: { family: 'Inter' }, padding: 12, cornerRadius: 8,
+                                    callbacks: { label: c => ' ' + fmt(c.parsed) }
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+        // Transactions
+        fetch(API.transactions, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(d => {
+                const tbody = document.getElementById('recentTransactionsList');
+                if (!d.transactions.length) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="no-data">No recent transactions.</td></tr>';
+                    return;
+                }
+                // Show max 5 on overview
+                tbody.innerHTML = d.transactions.slice(0, 5).map(t => {
+                    const isIncome = t.category_type === 'income';
+                    return `
+                    <tr>
+                        <td style="color:#64748b; font-size:0.85rem;">${t.date}</td>
+                        <td><span class="badge-${isIncome ? 'income' : 'expense'}">${t.category}</span></td>
+                        <td class="text-end fw-bold" style="color:${isIncome ? '#16a34a' : '#dc2626'}">${fmt(t.amount)}</td>
+                    </tr>`;
+                }).join('');
+            });
+
+        // Progress
+        fetch(API.progress, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(d => {
+                const commEl = document.getElementById('commThisMonth');
+                if (commEl) commEl.textContent = d.community_this_month;
+                document.getElementById('userProgressPct').textContent = d.user_progress_pct + '%';
+                const elActiveGoals = document.getElementById('activeGoalsCount');
+                if (elActiveGoals) elActiveGoals.textContent = d.active_goals || 0;
+            });
+
+        loadExpenseCharts();
+    }
+
+    let expenseFetchTimeout = null;
+
+    function loadExpenseCharts() {
+        const filter = document.getElementById('timeRangeFilter').value;
+        const ctxDaily = document.getElementById('dailyExpenseChart');
+        const ctxMonthly = document.getElementById('monthlyExpenseChart');
+
+        ctxDaily.parentElement.classList.add('loading-chart');
+        ctxMonthly.parentElement.classList.add('loading-chart');
+
+        fetch(`${API.expenses}?filter=${filter}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => {
+                if (!r.ok) throw new Error('API Error');
+                return r.json();
+            })
+            .then(d => {
+                ctxDaily.parentElement.classList.remove('loading-chart');
+                ctxMonthly.parentElement.classList.remove('loading-chart');
+
+                // Daily Chart Update
+                if (dailyChart) {
+                    dailyChart.data.labels = d.daily.labels;
+                    dailyChart.data.datasets[0].data = d.daily.data;
+                    dailyChart.update();
+                } else {
+                    dailyChart = new Chart(ctxDaily, {
+                        type: 'line',
+                        data: {
+                            labels: d.daily.labels,
+                            datasets: [{
+                                label: 'Daily Expense',
+                                data: d.daily.data,
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: { duration: 800, easing: 'easeOutQuart' }
+                        }
+                    });
+                }
+
+                // Monthly Chart Update
+                if (monthlyChart) {
+                    monthlyChart.data.labels = d.monthly.labels;
+                    monthlyChart.data.datasets[0].data = d.monthly.data;
+                    monthlyChart.update();
+                } else {
+                    monthlyChart = new Chart(ctxMonthly, {
+                        type: 'bar',
+                        data: {
+                            labels: d.monthly.labels,
+                            datasets: [{
+                                label: 'Monthly Expense',
+                                data: d.monthly.data,
+                                backgroundColor: '#8b5cf6',
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: { duration: 800, easing: 'easeOutQuart' }
+                        }
+                    });
+                }
+            })
+            .catch(e => {
+                console.error("Failed to load chart data:", e);
+                ctxDaily.parentElement.classList.remove('loading-chart');
+                ctxMonthly.parentElement.classList.remove('loading-chart');
+                if (typeof showToast === 'function') {
+                    showToast('Failed to load expense data.', 'error');
+                }
+            });
+    }
+
+    document.getElementById('timeRangeFilter')?.addEventListener('change', () => {
+        if (expenseFetchTimeout) clearTimeout(expenseFetchTimeout);
+        expenseFetchTimeout = setTimeout(loadExpenseCharts, 300);
+    });
+
+    // Since we use the global forms from base.html, we just need to provide reloadAll
+    window.reloadAll = loadOverview;
+
+    document.addEventListener('DOMContentLoaded', loadOverview);
+    const balanceEl = document.getElementById("balance");
+    balanceEl.style.opacity = 0;
+
+    setTimeout(() => {
+        balanceEl.innerText = "₹ " + balance.toFixed(2);
+        balanceEl.style.opacity = 1;
+    }, 1200);
+
+    // Example values (replace with Django values)
+    let income = 5000;
+    let expense = 1600;
+    let balance = income - expense;
+
+    // Animate
+    animateValue("totalIncome", 0, income, 1000);
+    animateValue("totalExpense", 0, expense, 1000);
+    animateValue("balance", 0, balance, 1000);
+
+    // Trend Icons
+    document.getElementById("balanceTrend").innerHTML =
+        balance >= 0 ? "📈" : "📉";
+
+    document.getElementById("balanceTrend").classList.add(
+        balance >= 0 ? "trend-up" : "trend-down"
+    );
+
+    // Dynamic Danger Mode
+    if (expense > income) {
+        document.querySelector(".expense").classList.add("danger");
+    }
+
+</script>
+{% endblock %}

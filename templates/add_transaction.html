@@ -1,13 +1,22 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
-<h3>Add Transaction</h3>
-
-<form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button class="btn btn-success">Save</button>
-</form>
-
+<div style="max-width:520px; margin:0 auto;">
+    <div class="section-header mb-3">
+        <h2 class="page-title">💳 <span>{% if edit_mode %}Edit{% else %}Add{% endif %} Transaction</span></h2>
+        <a href="{% url 'dashboard' %}" class="btn-sm-custom btn-edit"
+            style="text-decoration:none;padding:0.45rem 0.9rem;">
+            ← Back
+        </a>
+    </div>
+    <div class="card-panel">
+        <form method="POST">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn-primary-custom w-100 mt-2">
+                {% if edit_mode %}Update Transaction{% else %}Save Transaction{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
 {% endblock %}
