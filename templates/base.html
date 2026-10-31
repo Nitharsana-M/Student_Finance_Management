@@ -250,6 +250,27 @@
             -webkit-overflow-scrolling: touch;
         }
 
+        .transaction-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            color: #475569;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .transaction-toolbar .form-select {
+            width: auto;
+            min-width: 175px;
+        }
+
+        .transaction-filter-hint {
+            color: #8290a3;
+            font-size: 0.75rem;
+            font-weight: 400;
+        }
+
         /* ── CARDS ── */
         .stat-card {
             border-radius: 16px;
@@ -392,23 +413,221 @@
         /* ── GOAL CARD ── */
         .goal-card {
             background: #fff;
-            border-radius: 14px;
-            padding: 1.25rem 1.5rem;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-            margin-bottom: 1rem;
-            border-left: 4px solid var(--accent);
+            border: 1px solid #e8edf5;
+            border-radius: 18px;
+            padding: 1.35rem;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            margin-bottom: 0.75rem;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .goal-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+        }
+
+        .goal-card-heading {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 1.15rem;
+        }
+
+        .goal-eyebrow {
+            display: block;
+            color: #818cf8;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 0.35rem;
         }
 
         .goal-card h5 {
             font-weight: 700;
             color: var(--navy);
-            margin-bottom: 0.25rem;
+            font-size: 1.05rem;
+            margin: 0;
+            overflow-wrap: anywhere;
         }
 
-        .goal-card .amounts {
-            font-size: 0.875rem;
+        .goal-delete-btn {
+            flex: 0 0 auto;
+            border: 0;
+            border-radius: 9px;
+            width: 34px;
+            height: 34px;
+            background: #fff1f2;
+            color: #e11d48;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .goal-delete-btn:hover {
+            background: #e11d48;
+            color: #fff;
+        }
+
+        .goal-balance {
+            display: flex;
+            align-items: baseline;
+            gap: 0.4rem;
+            margin-bottom: 0.7rem;
             color: #64748b;
-            margin-bottom: 0.75rem;
+            font-size: 0.82rem;
+        }
+
+        .goal-balance strong {
+            color: var(--navy);
+            font-size: 1.35rem;
+            letter-spacing: -0.04em;
+        }
+
+        .goal-progress {
+            height: 9px;
+            margin-bottom: 0.55rem !important;
+        }
+
+        .goal-meta {
+            color: #7c8799;
+            font-size: 0.73rem;
+            font-weight: 600;
+        }
+
+        .goal-remaining {
+            color: #64748b;
+            font-size: 0.76rem;
+            margin: 0.8rem 0 1rem;
+        }
+
+        .goal-actions button {
+            flex: 1;
+            padding: 0.55rem 0.7rem;
+            border-radius: 9px;
+        }
+
+        .goal-add-btn {
+            color: #fff;
+            background: var(--navy);
+        }
+
+        .goal-withdraw-btn {
+            color: #4f46e5;
+            background: #eef2ff;
+        }
+
+        .goal-history {
+            background: #fff;
+            border: 1px solid #e8edf5;
+            border-radius: 14px;
+            padding: 0.95rem 1rem;
+            margin: 0 0 1.25rem;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.035);
+        }
+
+        .goal-history-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #475569;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 0.65rem;
+        }
+
+        .history-count {
+            background: #eef2ff;
+            color: #4f46e5;
+            min-width: 22px;
+            padding: 0.12rem 0.4rem;
+            border-radius: 100px;
+            text-align: center;
+            font-size: 0.68rem;
+        }
+
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .history-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.55rem 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .history-list li:last-child {
+            border: none;
+            padding-bottom: 0;
+        }
+
+        .history-entry-icon {
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            font-size: 0.8rem;
+        }
+
+        .history-entry-icon.deposit {
+            color: #059669;
+            background: #ecfdf5;
+        }
+
+        .history-entry-icon.withdrawal {
+            color: #d97706;
+            background: #fffbeb;
+        }
+
+        .history-entry-label {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .history-entry-label strong {
+            color: #334155;
+            font-size: 0.72rem;
+        }
+
+        .history-entry-label small {
+            color: #94a3b8;
+            font-size: 0.66rem;
+        }
+
+        .history-entry-amount {
+            color: #059669;
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+
+        .history-entry-amount.withdrawal-text {
+            color: #d97706;
+        }
+
+        .history-empty {
+            color: #94a3b8;
+            font-size: 0.75rem;
+            margin: 0;
+        }
+
+        .page-subtitle {
+            color: #7c8799;
+            font-size: 0.85rem;
+            margin-top: 0.35rem;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .goal-card,
+            .goal-delete-btn {
+                transition: none;
+            }
         }
 
         /* ── MODAL ── */
@@ -678,24 +897,6 @@
             font-weight: 500;
         }
 
-        /* History collapse */
-        .history-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .history-list li {
-            font-size: 0.8rem;
-            color: #64748b;
-            padding: 0.2rem 0;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .history-list li:last-child {
-            border: none;
-        }
-
         .no-data {
             text-align: center;
             color: #94a3b8;
@@ -733,6 +934,12 @@
 
             .content-area {
                 padding: 1.25rem 1rem 2rem;
+            }
+
+            .transaction-toolbar {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 0.4rem;
             }
 
             .page-title {

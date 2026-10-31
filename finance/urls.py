@@ -12,6 +12,7 @@ urlpatterns = [
     path('delete/<int:pk>/', views.delete_transaction, name='delete_transaction'),
     path('delete-ajax/<int:pk>/', views.delete_transaction_ajax, name='delete_transaction_ajax'),
     path('add-goal/', views.add_goal, name='add_goal'),
+    path('delete-goal/<int:goal_id>/', views.delete_goal, name='delete_goal'),
     path('add-savings/<int:goal_id>/', views.add_savings, name='add_savings'),
     path('withdraw/<int:goal_id>/', views.withdraw_savings, name='withdraw_savings'),
 
@@ -20,10 +21,12 @@ urlpatterns = [
     path('goals/', views.goals_view, name='goals'),
 
     # AJAX API endpoints
+    path('api/dashboard-data/', views.api_dashboard_data, name='api_dashboard_data'),
     path('api/summary/', views.api_summary, name='api_summary'),
     path('api/transactions/', views.api_transactions, name='api_transactions'),
     path('api/goals/', views.api_goals, name='api_goals'),
     path('api/progress/', views.api_progress, name='api_progress'),
+    path('api/monthly-income-savings/', views.monthly_income_savings_api, name='monthly_income_savings_api'),
 
     # Profile
     path('profile/', views.profile_view, name='profile'),

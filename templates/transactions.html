@@ -5,10 +5,23 @@
 ══════════════════════════════════════════════════════════════ -->
 <div class="page-section active" id="section-transactions">
     <div class="section-header">
-        <h2 class="page-title">All <span>Transactions</span></h2>
+        <div>
+            <h2 class="page-title">All <span>Transactions</span></h2>
+            <p class="page-subtitle mb-0">Your complete income and expense history, newest first.</p>
+        </div>
         <button class="btn-primary-custom" onclick="openModal('addTransactionModal')">
             <i class="bi bi-plus-lg me-1"></i> Add Transaction
         </button>
+    </div>
+
+    <div class="transaction-toolbar">
+        <label for="transactionTypeFilter">Show</label>
+        <select id="transactionTypeFilter" class="form-select">
+            <option value="">All transactions</option>
+            <option value="income">Income only</option>
+            <option value="expense">Expenses only</option>
+        </select>
+        <span class="transaction-filter-hint" id="transactionFilterHint">Select an income row and use the edit button to update it.</span>
     </div>
 
     <div class="card-panel">
@@ -69,10 +82,17 @@
     };
 
     const fmt = n => '₹ ' + parseFloat(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const typeFilter = document.getElementById('transactionTypeFilter');
 
     function loadTransactions() {
-        fetch(API.transactions, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(r => r.json())
+        const params = new URLSearchParams();
+        if (typeFilter.value) params.set('type', typeFilter.value);
+        const url = params.size ? `${API.transactions}?${params}` : API.transactions;
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => {
+                if (!r.ok) throw new Error('Unable to load transaction history.');
+                return r.json();
+            })
             .then(d => {
                 const tbody = document.getElementById('fullTransactionsList');
                 if (!d.transactions || !d.transactions.length) {
@@ -84,30 +104,40 @@
                     return `
                     <tr>
                         <td style="color:#64748b; font-size:0.85rem;">${t.date}</td>
-                        <td><span class="badge-${isIncome ? 'income' : 'expense'}">${t.category}</span></td>
+                        <td><span class="badge-${isIncome ? 'income' : 'expense'}">${escapeHtml(t.category)}</span></td>
                         <td class="text-end fw-bold" style="color:${isIncome ? '#16a34a' : '#dc2626'}">${fmt(t.amount)}</td>
                         <td class="text-end">
-                            <button class="btn-sm-custom btn-edit me-1" onclick="openEditModal(${t.id}, '${escHtml(t.category)}', ${t.amount}, '${t.date}')"><i class="bi bi-pencil-fill"></i></button>
-                            <button class="btn-sm-custom btn-delete" onclick="deleteTx(${t.id})"><i class="bi bi-trash-fill"></i></button>
+                            <button class="btn-sm-custom btn-edit me-1" aria-label="Edit transaction"
+                                onclick="openEditModal(${t.id}, ${t.category_id}, ${t.amount}, '${t.date}')"><i class="bi bi-pencil-fill"></i></button>
+                            <button class="btn-sm-custom btn-delete" aria-label="Delete transaction" onclick="deleteTx(${t.id})"><i class="bi bi-trash-fill"></i></button>
                         </td>
                     </tr>`;
                 }).join('');
+            })
+            .catch(error => {
+                document.getElementById('fullTransactionsList').innerHTML =
+                    `<tr><td colspan="4" class="no-data">${escapeHtml(error.message)}</td></tr>`;
+                console.error('Error loading transactions:', error);
             });
     }
 
-    function escHtml(s) { return s.replace(/['"]/g, ''); }
-
-    function openEditModal(pk, category, amount, date) {
+    function openEditModal(pk, categoryId, amount, date) {
         document.getElementById('editTxPk').value = pk;
         document.getElementById('editTxAmount').value = amount;
         document.getElementById('editTxDate').value = date;
 
         const sel = document.getElementById('editTxCategory');
         sel.innerHTML = window.globalCategoryCache.map(c =>
-            `<option value="${c.id}" ${c.name === category ? 'selected' : ''}>${c.name}</option>`
+            `<option value="${c.id}" ${String(c.id) === String(categoryId) ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
         ).join('');
 
         openModal('editTransactionModal');
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, char => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[char]);
     }
 
     function deleteTx(pk) {
@@ -141,6 +171,17 @@
     });
 
     window.reloadAll = loadTransactions;
+    typeFilter.value = new URLSearchParams(window.location.search).get('type') || '';
+    document.getElementById('transactionFilterHint').textContent = typeFilter.value === 'income'
+        ? 'Edit the amount, date, or category of any income entry.'
+        : 'Select an income row and use the edit button to update it.';
+    typeFilter.addEventListener('change', () => {
+        const hint = document.getElementById('transactionFilterHint');
+        hint.textContent = typeFilter.value === 'income'
+            ? 'Edit the amount, date, or category of any income entry.'
+            : 'Select an income row and use the edit button to update it.';
+        loadTransactions();
+    });
     document.addEventListener('DOMContentLoaded', loadTransactions);
 </script>
 {% endblock %}
